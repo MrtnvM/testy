@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next"
 import { ProfileAvatar } from "widgets"
 
 import { ChangeLang, ChangeTheme } from "features/system"
-import { ChangePassword, ChangeProfile } from "features/user"
+import { ChangeProfile } from "features/user"
 
 import styles from "./styles.module.css"
 
@@ -46,7 +46,7 @@ export const ProfilePage = () => {
             <Title level={3}>{t("General")}</Title>
             <div className={styles.generalActions}>
               <ChangeProfile />
-            </div>§
+            </div>
           </Row>
 
           <Row gutter={[16, 24]}>

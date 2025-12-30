@@ -50,6 +50,7 @@ Bug fixes:
 * The bulk operations button remains when changing the view (TMS-1984)
 * Long mark on the mass operation screen (TMS-1990)
 * Labels in the filter window are not displayed correctly (TMS-1991)
+* Added hot fix for production build
 
 Version 2.1.1
 --------------
