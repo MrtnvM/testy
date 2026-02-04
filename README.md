@@ -203,3 +203,9 @@ Please send a message [testy@yadro.com](mailto:testy@yadro.com) if you would lik
 
 This project is licensed under the terms of the 
 [AGPLv3 license](https://gitlab-pub.yadro.com/testy/testy/-/blob/main/LICENSE).
+
+<br />
+
+## Yadro Open Source
+
+[Find out more](https://yadro.com/ru/opensource/) about Open Source projects maintained by Yadro.
