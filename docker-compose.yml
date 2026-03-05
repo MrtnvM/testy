@@ -1,21 +1,24 @@
 services:
-  client:
-    container_name: testy-frontend
+  nginx:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: nginx/Dockerfile
+      args:
+        - VITE_APP_API_ROOT=
+        - VITE_APP_REPO_URL=${VITE_APP_REPO_URL:-https://gitlab-pub.yadro.com/testy/testy}
+        - VITE_APP_BUG_REPORT_URL=${VITE_APP_BUG_REPORT_URL:-mailto:testy@yadro.com}
     volumes:
-      - "/app/node_modules"
-      - "${VOLUMES_PATH}/build:/app/build"
-    environment:
-      - NODE_ENV=production
-    env_file:
-      - ${ENV_FILE:-.env}
-    user: "${UID}:${GID}"
+      - testy-static:/opt/testy/testy-static:ro
+      - testy-media:/opt/testy/media:ro
+    depends_on:
+      - testy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:80/ || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   testy:
-    container_name: testy
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     build:
       context: ./backend/testy
       dockerfile: scripts/Dockerfile
@@ -24,13 +27,31 @@ services:
     image: testy:latest
     pull_policy: build
     volumes:
-      - "./backend/testy/media:/testy/media"
-      - "./backend/testy/testy-static:/testy/testy-static"
+      - testy-media:/testy/media
+      - testy-static:/testy/testy-static
     environment:
       - DJANGO_SETTINGS_MODULE=root.settings.production
-    ports:
-      - "8001:8000"
-    env_file: ${ENV_FILE:-.env}
+      - POSTGRES_NAME=${POSTGRES_NAME:-postgres}
+      - POSTGRES_USER=${SERVICE_USER_POSTGRES:-postgres}
+      - POSTGRES_PASSWORD=${SERVICE_PASSWORD_POSTGRES}
+      - POSTGRES_SERVICE_HOST=pgbouncer
+      - POSTGRES_SERVICE_PORT=5432
+      - SECRET_KEY=${SERVICE_PASSWORD_64_DJANGO}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-'["localhost"]'}
+      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS:-'["http://localhost"]'}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_BROKER_URL=redis://redis:6379
+      - CELERY_RESULT_BACKEND=redis://redis:6379
+      - COMPANY_DOMAIN=${COMPANY_DOMAIN:-example.com}
+      - SUPERUSER_USERNAME=${SUPERUSER_USERNAME:-admin}
+      - SUPERUSER_PASSWORD=${SUPERUSER_PASSWORD:-password}
+      - EMAIL_HOST=${EMAIL_HOST:-}
+      - EMAIL_PORT=${EMAIL_PORT:-587}
+      - EMAIL_HOST_USER=${EMAIL_HOST_USER:-}
+      - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD:-}
+      - TESTY_ALLOW_FILE_RESPONSE=${TESTY_ALLOW_FILE_RESPONSE:-False}
+      - CUSTOM_MIMETYPES=${CUSTOM_MIMETYPES:-[]}
     command: scripts/entrypoint.sh
     depends_on:
       pgbouncer:
@@ -44,28 +65,33 @@ services:
           memory: 4g
 
   db:
-    container_name: testy_db
     image: postgres:14.5-alpine
     volumes:
-      - "${VOLUMES_PATH}/pg-data:/var/lib/postgresql/data"
-    env_file: ${ENV_FILE:-.env}
+      - pg-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=${SERVICE_USER_POSTGRES:-postgres}
+      - POSTGRES_PASSWORD=${SERVICE_PASSWORD_POSTGRES}
+      - POSTGRES_DB=${POSTGRES_NAME:-postgres}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
-    ports:
-      - "5435:5432"
     shm_size: "1gb"
 
   pgbouncer:
-    container_name: testy_pgbouncer
     image: edoburu/pgbouncer:1.22.1-p0
-    env_file: ${ENV_FILE:-.env}
-    ports:
-      - "5436:5432"
+    environment:
+      - DB_USER=${SERVICE_USER_POSTGRES:-postgres}
+      - DB_PASSWORD=${SERVICE_PASSWORD_POSTGRES}
+      - DB_HOST=db
+      - DB_NAME=${POSTGRES_NAME:-postgres}
+      - POOL_MODE=transaction
+      - ADMIN_USERS=${SERVICE_USER_POSTGRES:-postgres}
+      - AUTH_TYPE=scram-sha-256
+      - MAX_CLIENT_CONN=1000
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h ${DB_HOST} -U ${POSTGRES_USER}"]
+      test: ["CMD-SHELL", "pg_isready -h db -U ${SERVICE_USER_POSTGRES:-postgres}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -74,13 +100,10 @@ services:
         condition: service_healthy
 
   redis:
-    container_name: testy_redis
     image: redis:alpine
     command: redis-server --appendonly yes
     volumes:
-      - "${VOLUMES_PATH}/redis_data:/data"
-    ports:
-      - "6380:6379"
+      - redis-data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
       interval: 5s
@@ -88,25 +111,31 @@ services:
       retries: 5
 
   celery:
-    container_name: testy_celery
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    restart: always
     image: testy:latest
-    pull_policy: build
+    pull_policy: never
+    restart: always
     command: celery -A root worker -B -l INFO
     volumes:
-      - "./backend/testy/media:/testy/media"
-      - "./backend/testy/testy-static:/testy/testy-static"
+      - testy-media:/testy/media
+      - testy-static:/testy/testy-static
     environment:
       - DJANGO_SETTINGS_MODULE=root.settings.production
-    env_file: ${ENV_FILE:-.env}
-    healthcheck:
-      test: ["CMD-SHELL", "celery -b ${CELERY_BROKER_URL} inspect ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      - POSTGRES_NAME=${POSTGRES_NAME:-postgres}
+      - POSTGRES_USER=${SERVICE_USER_POSTGRES:-postgres}
+      - POSTGRES_PASSWORD=${SERVICE_PASSWORD_POSTGRES}
+      - POSTGRES_SERVICE_HOST=pgbouncer
+      - POSTGRES_SERVICE_PORT=5432
+      - SECRET_KEY=${SERVICE_PASSWORD_64_DJANGO}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-'["localhost"]'}
+      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS:-'["http://localhost"]'}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_BROKER_URL=redis://redis:6379
+      - CELERY_RESULT_BACKEND=redis://redis:6379
+      - COMPANY_DOMAIN=${COMPANY_DOMAIN:-example.com}
+      - CUSTOM_MIMETYPES=${CUSTOM_MIMETYPES:-[]}
     depends_on:
+      - testy
       - redis
       - pgbouncer
     deploy:
@@ -116,13 +145,27 @@ services:
           memory: 4g
 
   notification-worker:
-    container_name: notifications
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     image: testy:latest
-    pull_policy: build
+    pull_policy: never
     restart: always
-    env_file: ${ENV_FILE:-.env}
+    command: python manage.py runworker notifications
+    environment:
+      - DJANGO_SETTINGS_MODULE=root.settings.production
+      - POSTGRES_NAME=${POSTGRES_NAME:-postgres}
+      - POSTGRES_USER=${SERVICE_USER_POSTGRES:-postgres}
+      - POSTGRES_PASSWORD=${SERVICE_PASSWORD_POSTGRES}
+      - POSTGRES_SERVICE_HOST=pgbouncer
+      - POSTGRES_SERVICE_PORT=5432
+      - SECRET_KEY=${SERVICE_PASSWORD_64_DJANGO}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_BROKER_URL=redis://redis:6379
+      - CELERY_RESULT_BACKEND=redis://redis:6379
     depends_on:
       - testy
-    command: python manage.py runworker notifications
+
+volumes:
+  pg-data:
+  redis-data:
+  testy-static:
+  testy-media:

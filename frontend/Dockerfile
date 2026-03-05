@@ -1,9 +1,19 @@
-FROM node:18.13.0-alpine
+# Stage 1 — build
+FROM node:20-alpine AS builder
 
-RUN mkdir /app
 WORKDIR /app
-COPY package.json /app/package.json
-COPY package-lock.json /app/package-lock.json
-RUN npm ci
-COPY . /app
-CMD ["npm", "run", "build"]
+
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+RUN npm run build
+
+
+# Stage 2 — serve
+FROM nginx:alpine
+
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
