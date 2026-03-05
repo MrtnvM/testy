@@ -7,6 +7,8 @@ services:
         - VITE_APP_API_ROOT=
         - VITE_APP_REPO_URL=${VITE_APP_REPO_URL:-https://gitlab-pub.yadro.com/testy/testy}
         - VITE_APP_BUG_REPORT_URL=${VITE_APP_BUG_REPORT_URL:-mailto:testy@yadro.com}
+    ports:
+      - "80:80"
     volumes:
       - testy-static:/opt/testy/testy-static:ro
       - testy-media:/opt/testy/media:ro
