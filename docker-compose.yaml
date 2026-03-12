@@ -37,8 +37,8 @@ services:
       - POSTGRES_SERVICE_HOST=pgbouncer
       - POSTGRES_SERVICE_PORT=5432
       - SECRET_KEY=${SERVICE_PASSWORD_64_DJANGO}
-      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-'["localhost"]'}
-      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS:-'["http://localhost"]'}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-["localhost"]}
+      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS:-["http://localhost"]}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - CELERY_BROKER_URL=redis://redis:6379
@@ -126,8 +126,8 @@ services:
       - POSTGRES_SERVICE_HOST=pgbouncer
       - POSTGRES_SERVICE_PORT=5432
       - SECRET_KEY=${SERVICE_PASSWORD_64_DJANGO}
-      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-'["localhost"]'}
-      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS:-'["http://localhost"]'}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-["localhost"]}
+      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS:-["http://localhost"]}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - CELERY_BROKER_URL=redis://redis:6379
