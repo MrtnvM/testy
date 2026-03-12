@@ -1,12 +1,7 @@
 services:
   nginx:
-    build:
-      context: .
-      dockerfile: nginx/Dockerfile
-      args:
-        - VITE_APP_API_ROOT=
-        - VITE_APP_REPO_URL=${VITE_APP_REPO_URL:-https://gitlab-pub.yadro.com/testy/testy}
-        - VITE_APP_BUG_REPORT_URL=${VITE_APP_BUG_REPORT_URL:-mailto:testy@yadro.com}
+    image: registry.cl.mb-dev.ru/testy/nginx:latest
+    pull_policy: always
     ports:
       - "80:80"
     volumes:
@@ -21,13 +16,8 @@ services:
       retries: 5
 
   testy:
-    build:
-      context: ./backend/testy
-      dockerfile: scripts/Dockerfile
-      args:
-        - ENV=prod
-    image: testy:latest
-    pull_policy: build
+    image: registry.cl.mb-dev.ru/testy/backend:latest
+    pull_policy: always
     volumes:
       - testy-media:/testy/media
       - testy-static:/testy/testy-static
@@ -113,8 +103,8 @@ services:
       retries: 5
 
   celery:
-    image: testy:latest
-    pull_policy: never
+    image: registry.cl.mb-dev.ru/testy/backend:latest
+    pull_policy: always
     restart: always
     command: celery -A root worker -B -l INFO
     volumes:
@@ -147,8 +137,8 @@ services:
           memory: 4g
 
   notification-worker:
-    image: testy:latest
-    pull_policy: never
+    image: registry.cl.mb-dev.ru/testy/backend:latest
+    pull_policy: always
     restart: always
     command: python manage.py runworker notifications
     environment:
