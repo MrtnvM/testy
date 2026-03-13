@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "testy": {
+      "url": "http://testy.cl.mb-dev.ru/mcp"
+    }
+  }
+}
